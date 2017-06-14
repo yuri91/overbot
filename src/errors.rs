@@ -1,7 +1,7 @@
 use super::serde_json;
 use super::toml;
 use std::io;
-use super::telegram_bot;
+use super::telegram_bot_client;
 
 error_chain! {
     types {
@@ -9,7 +9,7 @@ error_chain! {
     }
 
     links {
-        Bot(telegram_bot::errors::Error, telegram_bot::errors::ErrorKind);
+        Bot(telegram_bot_client::errors::Error, telegram_bot_client::errors::ErrorKind);
     }
 
     foreign_links {

@@ -13,12 +13,12 @@ extern crate toml;
 #[macro_use]
 extern crate error_chain;
 
-extern crate telegram_bot;
-use telegram_bot::{BotFactory, Update};
-use telegram_bot::errors::Error as TGError;
+extern crate telegram_bot_client;
+use telegram_bot_client::{BotFactory, Update};
+use telegram_bot_client::errors::Error as TGError;
 
-extern crate telegram_bot_api;
-use telegram_bot_api as api;
+extern crate telegram_bot_types;
+use telegram_bot_types as types;
 
 use tokio_core::reactor;
 use tokio_io::io;
@@ -47,7 +47,7 @@ fn main() {
             match update {
                 Update::Message(msg) => {
                     let original = msg.clone();
-                    let msg: api::response::Message = serde_json::from_value(msg)
+                    let msg: types::response::Message = serde_json::from_value(msg)
                         .expect("Unexpected message format");
                     if let Some(text) = msg.text.clone() {
                         for c in &config_bot.commands {
@@ -87,15 +87,15 @@ fn main() {
                         .request::<_,serde_json::Value>("sendMessage",&json);
                 } else {
                     let parse_mode = match cmd.output {
-                        config::OutputType::Text => api::request::ParseMode::Text,
-                        config::OutputType::TextMono => api::request::ParseMode::Markdown,
-                        config::OutputType::Markdown => api::request::ParseMode::Markdown,
-                        config::OutputType::Html => api::request::ParseMode::Html,
+                        config::OutputType::Text => types::request::ParseMode::Text,
+                        config::OutputType::TextMono => types::request::ParseMode::Markdown,
+                        config::OutputType::Markdown => types::request::ParseMode::Markdown,
+                        config::OutputType::Html => types::request::ParseMode::Html,
                         config::OutputType::Json => unreachable!()
                     };
                     work = bot
                         .request::<_,serde_json::Value>("sendMessage",
-                                 &serde_json::to_value(api::request::Message::new(msg.chat.id,out).parse_mode(parse_mode))
+                                 &serde_json::to_value(types::request::Message::new(msg.chat.id,out).parse_mode(parse_mode))
                                  .unwrap());
                 }
                 let work = work.and_then(|r| {
