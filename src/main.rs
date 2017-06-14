@@ -10,9 +10,12 @@ extern crate serde_derive;
 extern crate serde_json;
 extern crate toml;
 
+#[macro_use]
+extern crate error_chain;
+
 extern crate telegram_bot;
 use telegram_bot::{BotFactory, Update};
-use telegram_bot::errors::Error;
+use telegram_bot::errors::Error as TGError;
 
 extern crate telegram_bot_api;
 use telegram_bot_api as api;
@@ -27,6 +30,7 @@ use tokio_process::CommandExt;
 
 use std::fs;
 use std::io::prelude::*;
+mod errors;
 
 mod config {
     #[derive(Clone, Debug, PartialEq, Eq, Deserialize)]
@@ -110,7 +114,7 @@ fn main() {
                 config::InputType::Json => io::write_all(stdin,serde_json::to_vec(&original).unwrap()),
             };
             let res = res.map_err(|e|e.into());
-            res.and_then(|_| child.wait_with_output().map_err(|e|Error::from(e)).and_then(move |out| {
+            res.and_then(|_| child.wait_with_output().map_err(|e|TGError::from(e)).and_then(move |out| {
                 let mut out = String::from_utf8(out.stdout).unwrap();
                 println!("out: {:?}",out);
                 if cmd.output == config::OutputType::TextMono {
