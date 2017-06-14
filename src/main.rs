@@ -68,6 +68,7 @@ fn main() {
             let handle = handle.clone();
             let bot = bot.clone();
             let mut child = Command::new(&cmd.executable)
+                .args(&cmd.args)
                 .stdin(Stdio::piped())
                 .stdout(Stdio::piped())
                 .spawn_async(&handle).expect("failed to spawn process");
