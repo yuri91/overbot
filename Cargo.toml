@@ -1,6 +1,11 @@
 [package]
 authors = ["Yuri Iozzelli <y.iozzelli@gmail.com>"]
 name = "overbot"
+description = "Telegram Bot Manager that abstracts away the boring stuff and leave you the fun"
+documentation = "https://docs.rs/overbot"
+keywords = ["telegram","bot","api", "client", "async"]
+license = "MIT OR Apache-2.0"
+repository = "https://github.com/yuri91/overbot"
 version = "0.1.0"
 
 [dependencies]
