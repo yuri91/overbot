@@ -28,58 +28,18 @@ use futures::future;
 use std::process::{Command,Stdio};
 use tokio_process::CommandExt;
 
-use std::fs;
-use std::io::prelude::*;
+mod config;
 mod errors;
 
-mod config {
-    #[derive(Clone, Debug, PartialEq, Eq, Deserialize)]
-    #[serde(rename_all="lowercase")]
-    pub enum InputType {
-        Text,
-        Json
-    }
-    #[derive(Clone, Debug, PartialEq, Eq, Deserialize)]
-    #[serde(rename_all="lowercase")]
-    pub enum OutputType {
-        Text,
-        TextMono,
-        Markdown,
-        Html,
-        Json
-    }
-    #[derive(Clone, Deserialize)]
-    pub struct Bot {
-        pub token: String,
-        pub command: Vec<Command>
-    }
-    #[derive(Clone, Deserialize)]
-    pub struct Command {
-        pub prefix: String,
-        pub executable: String,
-        #[serde(default)]
-        pub args: Vec<String>,
-        pub input: InputType,
-        pub output: OutputType,
-    }
-    #[derive(Clone, Deserialize)]
-    pub struct Config {
-        pub bot: Vec<Bot>
-    }
-}
 
 fn main() {
-    let mut config_file = fs::File::open("bot.toml").expect("no file");
-    let mut content = String::new();
-    config_file.read_to_string(&mut content).expect("can't read file");
-    let config: config::Config = toml::from_str(&content).expect("wrong config");
+    let config = config::get("test.toml").expect("config error");
 
     let mut event_loop = reactor::Core::new().unwrap();
     let handle = event_loop.handle();
 
     let factory = BotFactory::new(handle.clone());
-    let work = future::join_all(config.bot.into_iter().map(|config_bot| {
-        println!("{}",config_bot.token);
+    let work = future::join_all(config.bots.into_iter().map(|config_bot| {
         let handle = handle.clone();
         let (bot,updates) = factory.new_bot(&config_bot.token);
         updates.filter_map(move|update| {
@@ -90,7 +50,7 @@ fn main() {
                     let msg: api::response::Message = serde_json::from_value(msg)
                         .expect("Unexpected message format");
                     if let Some(text) = msg.text.clone() {
-                        for c in &config_bot.command {
+                        for c in &config_bot.commands {
                             if text.starts_with(&c.prefix) {
                                 return Some((c.clone(),msg,original))
                             }
