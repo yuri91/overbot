@@ -33,7 +33,8 @@ mod errors;
 
 
 fn main() {
-    let config = config::get("test.toml").expect("config error");
+    let fname = std::env::args().skip(1).next().expect("Please provide a .toml as argument");
+    let config = config::get(&fname).expect("config error");
 
     let mut event_loop = reactor::Core::new().unwrap();
     let handle = event_loop.handle();
