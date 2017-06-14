@@ -51,7 +51,9 @@ fn main() {
                         .expect("Unexpected message format");
                     if let Some(text) = msg.text.clone() {
                         for c in &config_bot.commands {
-                            if text.starts_with(&c.prefix) {
+                            if text.starts_with(&c.prefix) &&
+                                c.allowed(msg.from.id) &&
+                                c.allowed(msg.chat.id) {
                                 return Some((c.clone(),msg,original))
                             }
                         }

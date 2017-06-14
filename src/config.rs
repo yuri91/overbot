@@ -1,5 +1,4 @@
 use std::fs;
-use std::collections::HashSet;
 use std::io::prelude::*;
 use super::toml;
 use super::errors::*;
@@ -24,10 +23,7 @@ pub struct Bot {
     pub token: String,
     #[serde(rename="command")]
     pub commands: Vec<Command>,
-    #[serde(default)]
-    pub whitelist: HashSet<String>,
-    #[serde(default)]
-    pub blacklist: HashSet<String>,
+    pub allowed: Option<Vec<i64>>,
 }
 #[derive(Clone, Deserialize)]
 pub struct Command {
@@ -37,37 +33,39 @@ pub struct Command {
     pub args: Vec<String>,
     pub input: InputType,
     pub output: OutputType,
-    #[serde(default)]
-    pub whitelist: HashSet<String>,
-    #[serde(default)]
-    pub blacklist: HashSet<String>,
+    pub allowed: Option<Vec<i64>>,
+}
+impl Command {
+    pub fn allowed(&self, id: i64) -> bool {
+        if let Some(ref allowed) = self.allowed {
+            match allowed.binary_search(&id) {
+                Ok(_) => return true,
+                Err(_) => return false
+            }
+        } else {
+            return true;
+        }
+    }
 }
 #[derive(Clone, Deserialize)]
 pub struct Config {
     #[serde(rename="bot")]
     pub bots: Vec<Bot>,
-    #[serde(default)]
-    pub whitelist: HashSet<String>,
-    #[serde(default)]
-    pub blacklist: HashSet<String>,
+    pub allowed: Option<Vec<i64>>,
 }
 impl Config {
-    fn apply_acl(&mut self) {
+    fn apply_inheritance(&mut self) {
         for bot in &mut self.bots {
             for command in &mut bot.commands {
-                if command.whitelist.len() == 0 {
-                    if bot.whitelist.len() == 0 {
-                        command.whitelist = self.whitelist.clone();
-                    } else {
-                        command.whitelist = bot.whitelist.clone();
+                if command.allowed.is_none() {
+                    if bot.allowed.is_some() {
+                        command.allowed = bot.allowed.clone();
+                    } else if self.allowed.is_some() {
+                        command.allowed = self.allowed.clone();
                     }
                 }
-                if command.blacklist.len() == 0 {
-                    if bot.blacklist.len() == 0 {
-                        command.blacklist = self.blacklist.clone();
-                    } else {
-                        command.blacklist = bot.blacklist.clone();
-                    }
+                if let Some(ref mut allowed) = command.allowed {
+                    allowed.sort();
                 }
             }
         }
@@ -79,6 +77,6 @@ pub fn get(path: &str) -> Result<Config> {
     let mut content = String::new();
     config_file.read_to_string(&mut content)?;
     let mut config: Config = toml::from_str(&content)?;
-    config.apply_acl();
+    config.apply_inheritance();
     Ok(config)
 }
