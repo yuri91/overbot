@@ -10,31 +10,20 @@ Example .toml configuration:
 
 ```
 
-[[bot]]
 token = "bot-token-1"
 
-	[[bot.command]]
-	prefix = "/json"
-	executable = "./json_test.py"
-	input = "json"
-	output = "json"
+[[command]]
+prefix = "/json"
+executable = "./json_test.py"
+input = "json"
+output = "json"
 
-[[bot]]
-allowed = [user_id1, user_id2, group_id1]
-token = "bot-token-2"
-
-	[[bot.command]]
-	prefix = "/uptime"
-	executable = "uptime"
-	input = "text"
-	output = "textmono"
-
-	[[bot.command]]
-	prefix = "/free"
-	executable = "free"
-	args = ["-h"]
-	input = "text"
-	output = "textmono"
+[[command]]
+prefix = "/free"
+executable = "free"
+args = ["-h"]
+input = "text"
+output = "textmono"
 
 ```
 
