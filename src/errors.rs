@@ -19,5 +19,9 @@ error_chain! {
     }
 
     errors {
+        Config(file: String, descr: &'static str) {
+            description("Configuration error")
+            display("Error in conf file {}: {}", file, descr)
+        }
     }
 }

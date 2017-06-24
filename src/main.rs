@@ -28,21 +28,32 @@ use futures::future;
 use std::process::{Command, Stdio};
 use tokio_process::CommandExt;
 
+extern crate structopt;
+#[macro_use]
+extern crate structopt_derive;
+
+use structopt::StructOpt;
+
+#[derive(StructOpt, Debug)]
+#[structopt(name = "overbot", about = "A telegram bot manager")]
+struct Opt {
+    #[structopt(help = "Config files directory")]
+    config_dir: String,
+}
+
 mod config;
 mod errors;
 
 
 fn main() {
-    let fname = std::env::args().skip(1).next().expect(
-        "Please provide a .toml as argument",
-    );
-    let config = config::get(&fname).expect("config error");
+    let opt = Opt::from_args();
+    let config = config::get_all(&opt.config_dir).expect("Wrong path for config dir");
 
     let mut event_loop = reactor::Core::new().unwrap();
     let handle = event_loop.handle();
 
     let factory = BotFactory::new(handle.clone());
-    let work = future::join_all(config.bots.into_iter().map(|config_bot| {
+    let work = future::join_all(config.into_iter().map(|config_bot| {
         let handle = handle.clone();
         let (bot, updates) = factory.new_bot(&config_bot.token);
         updates

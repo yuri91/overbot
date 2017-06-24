@@ -1,7 +1,9 @@
 use std::fs;
+use std::path::Path;
 use std::io::prelude::*;
 use super::toml;
-use super::errors::*;
+use super::serde_json;
+use super::errors::{Result, ResultExt, ErrorKind};
 
 #[derive(Clone, Debug, PartialEq, Eq, Deserialize)]
 #[serde(rename_all = "lowercase")]
@@ -47,36 +49,78 @@ impl Command {
         }
     }
 }
-#[derive(Clone, Deserialize)]
-pub struct Config {
-    #[serde(rename = "bot")]
-    pub bots: Vec<Bot>,
-    pub allowed: Option<Vec<i64>>,
-}
-impl Config {
+impl Bot {
     fn apply_inheritance(&mut self) {
-        for bot in &mut self.bots {
-            for command in &mut bot.commands {
-                if command.allowed.is_none() {
-                    if bot.allowed.is_some() {
-                        command.allowed = bot.allowed.clone();
-                    } else if self.allowed.is_some() {
-                        command.allowed = self.allowed.clone();
-                    }
-                }
-                if let Some(ref mut allowed) = command.allowed {
-                    allowed.sort();
-                }
+        for command in &mut self.commands {
+            if command.allowed.is_none() && self.allowed.is_some() {
+                command.allowed = self.allowed.clone();
             }
+            if let Some(ref mut allowed) = command.allowed {
+                allowed.sort();
+            }
+
+        }
+    }
+    fn fix_relative_paths<P: AsRef<Path>>(&mut self, base_dir: P) {
+        let base_dir = base_dir.as_ref();
+        for command in &mut self.commands {
+            let abs = base_dir.join(&command.executable);
+            command.executable = abs.into_os_string().into_string().expect(
+                "I expected this string to be valid UTF-8",
+            )
         }
     }
 }
 
-pub fn get(path: &str) -> Result<Config> {
-    let mut config_file = fs::File::open(path)?;
+enum ConfType {
+    Json,
+    Toml,
+}
+fn get<P: AsRef<Path>>(path: P, ty: ConfType) -> Result<Bot> {
+    let path = path.as_ref();
+    let mut config_file = fs::File::open(path).chain_err(|| {
+        ErrorKind::Config(path.to_string_lossy().into_owned(), "Cannot open")
+    })?;
     let mut content = String::new();
-    config_file.read_to_string(&mut content)?;
-    let mut config: Config = toml::from_str(&content)?;
-    config.apply_inheritance();
-    Ok(config)
+    config_file.read_to_string(&mut content).chain_err(|| {
+        ErrorKind::Config(path.to_string_lossy().into_owned(), "Error in reading file")
+    })?;
+    let mut bot: Bot = match ty {
+        ConfType::Toml => {
+            toml::from_str(&content).chain_err(|| {
+                ErrorKind::Config(path.to_string_lossy().into_owned(), "Error in conf file")
+            })?
+        }
+        ConfType::Json => {
+            serde_json::from_str(&content).chain_err(|| {
+                ErrorKind::Config(path.to_string_lossy().into_owned(), "Error in conf file")
+            })?
+        }
+
+    };
+    bot.apply_inheritance();
+    bot.fix_relative_paths(path.parent().expect("This should be a file"));
+    Ok(bot)
+}
+
+pub fn get_all<P: AsRef<Path>>(dir: P) -> Result<Vec<Bot>> {
+    let dir = dir.as_ref();
+    let entries = fs::read_dir(dir).chain_err(|| {
+        ErrorKind::Config(dir.to_string_lossy().into_owned(), "Conf dir not found")
+    })?;
+    entries
+        .filter_map(|e| {
+            if let Ok(entry) = e {
+                let p = entry.path();
+                if let Some(ext) = p.extension() {
+                    if ext == "toml" {
+                        return Some(get(p.to_str().unwrap(), ConfType::Toml));
+                    } else if ext == "json" {
+                        return Some(get(p.to_str().unwrap(), ConfType::Json));
+                    }
+                }
+            }
+            None
+        })
+        .collect()
 }
