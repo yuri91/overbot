@@ -4,24 +4,24 @@ use super::toml;
 use super::errors::*;
 
 #[derive(Clone, Debug, PartialEq, Eq, Deserialize)]
-#[serde(rename_all="lowercase")]
+#[serde(rename_all = "lowercase")]
 pub enum InputType {
     Text,
-    Json
+    Json,
 }
 #[derive(Clone, Debug, PartialEq, Eq, Deserialize)]
-#[serde(rename_all="lowercase")]
+#[serde(rename_all = "lowercase")]
 pub enum OutputType {
     Text,
     TextMono,
     Markdown,
     Html,
-    Json
+    Json,
 }
 #[derive(Clone, Deserialize)]
 pub struct Bot {
     pub token: String,
-    #[serde(rename="command")]
+    #[serde(rename = "command")]
     pub commands: Vec<Command>,
     pub allowed: Option<Vec<i64>>,
 }
@@ -40,7 +40,7 @@ impl Command {
         if let Some(ref allowed) = self.allowed {
             match allowed.binary_search(&id) {
                 Ok(_) => return true,
-                Err(_) => return false
+                Err(_) => return false,
             }
         } else {
             return true;
@@ -49,7 +49,7 @@ impl Command {
 }
 #[derive(Clone, Deserialize)]
 pub struct Config {
-    #[serde(rename="bot")]
+    #[serde(rename = "bot")]
     pub bots: Vec<Bot>,
     pub allowed: Option<Vec<i64>>,
 }
