@@ -6,7 +6,7 @@ keywords = ["telegram", "bot", "api", "client", "async"]
 license = "MIT OR Apache-2.0"
 name = "overbot"
 repository = "https://github.com/yuri91/overbot"
-version = "0.2.0"
+version = "0.3.0"
 [dependencies]
 error-chain = "0.10.0"
 futures = "0.1.14"
