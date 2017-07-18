@@ -1,8 +1,12 @@
+use std;
 use std::fs;
+use std::fmt;
 use std::path::Path;
 use std::io::prelude::*;
 use super::toml;
+use super::serde::de;
 use super::serde_json;
+use super::regex;
 use super::errors::{Result, ResultExt, ErrorKind};
 
 #[derive(Clone, Debug, PartialEq, Eq, Deserialize)]
@@ -27,9 +31,31 @@ pub struct Bot {
     pub commands: Vec<Command>,
     pub allowed: Option<Vec<i64>>,
 }
+type RegexResult<E> = std::result::Result<regex::Regex,E>;
+fn deserialize_regex<'de, D>(deserializer: D) -> RegexResult<D::Error>
+    where D: de::Deserializer<'de>
+{
+    struct RegexDe;
+
+    impl<'de> de::Visitor<'de> for RegexDe {
+        type Value = regex::Regex;
+
+        fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+            formatter.write_str("valid regex")
+        }
+
+        fn visit_str<E>(self, value: &str) -> RegexResult<E>
+            where E: de::Error
+        {
+            regex::Regex::new(value).map_err(|_|de::Error::invalid_value(de::Unexpected::Str(value),&self))
+        }
+    }
+    deserializer.deserialize_str(RegexDe)
+}
 #[derive(Clone, Deserialize)]
 pub struct Command {
-    pub prefix: String,
+    #[serde(deserialize_with="deserialize_regex")]
+    pub regex: regex::Regex,
     pub executable: String,
     #[serde(default)]
     pub args: Vec<String>,

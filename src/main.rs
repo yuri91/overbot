@@ -10,6 +10,8 @@ extern crate serde_derive;
 extern crate serde_json;
 extern crate toml;
 
+extern crate regex;
+
 #[macro_use]
 extern crate error_chain;
 
@@ -66,10 +68,16 @@ fn main() {
                             serde_json::from_value(msg).expect("Unexpected message format");
                         if let Some(text) = msg.text.clone() {
                             for c in &config_bot.commands {
-                                if text.starts_with(&c.prefix) && c.allowed(msg.from.id) &&
-                                    c.allowed(msg.chat.id)
+                                if c.allowed(msg.from.id) &&
+                                    c.allowed(msg.chat.id) && c.regex.is_match(&text)
                                 {
-                                    return Some((c.clone(), msg, original));
+                                    let captures = c.regex.captures(&text).expect("we already checked for match");
+                                    let args : Vec<String> = c.args.iter().map(|a| {
+                                        let mut buf = String::new();
+                                        captures.expand(a, &mut buf);
+                                        buf
+                                    }).collect();
+                                    return Some((c.clone(), msg, original, args));
                                 }
                             }
                         }
@@ -78,11 +86,11 @@ fn main() {
                 };
                 None
             })
-            .for_each(move |(cmd, msg, original)| {
+            .for_each(move |(cmd, msg, original, args)| {
                 let handle = handle.clone();
                 let bot = bot.clone();
                 let mut child = Command::new(&cmd.executable)
-                    .args(&cmd.args)
+                    .args(&args)
                     .stdin(Stdio::piped())
                     .stdout(Stdio::piped())
                     .spawn_async(&handle)
