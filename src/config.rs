@@ -31,9 +31,10 @@ pub struct Bot {
     pub commands: Vec<Command>,
     pub allowed: Option<Vec<i64>>,
 }
-type RegexResult<E> = std::result::Result<regex::Regex,E>;
+type RegexResult<E> = std::result::Result<regex::Regex, E>;
 fn deserialize_regex<'de, D>(deserializer: D) -> RegexResult<D::Error>
-    where D: de::Deserializer<'de>
+where
+    D: de::Deserializer<'de>,
 {
     struct RegexDe;
 
@@ -45,16 +46,19 @@ fn deserialize_regex<'de, D>(deserializer: D) -> RegexResult<D::Error>
         }
 
         fn visit_str<E>(self, value: &str) -> RegexResult<E>
-            where E: de::Error
+        where
+            E: de::Error,
         {
-            regex::Regex::new(value).map_err(|_|de::Error::invalid_value(de::Unexpected::Str(value),&self))
+            regex::Regex::new(value).map_err(|_| {
+                de::Error::invalid_value(de::Unexpected::Str(value), &self)
+            })
         }
     }
     deserializer.deserialize_str(RegexDe)
 }
 #[derive(Clone, Deserialize)]
 pub struct Command {
-    #[serde(deserialize_with="deserialize_regex")]
+    #[serde(deserialize_with = "deserialize_regex")]
     pub regex: regex::Regex,
     pub executable: String,
     #[serde(default)]
