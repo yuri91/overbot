@@ -72,15 +72,7 @@ fn main() {
                                     if c.allowed(msg.from.id) && c.allowed(msg.chat.id) &&
                                         c.regex.is_match(&text)
                                     {
-                                        let captures = c.regex.captures(&text).expect(
-                                            "we already checked for match",
-                                        );
-                                        let args : Vec<String> = c.args.iter().map(|a| {
-                                        let mut buf = String::new();
-                                        captures.expand(a, &mut buf);
-                                        buf
-                                    }).collect();
-                                        return Some((c.clone(), msg, original, args));
+                                        return Some((c.clone(), msg, original));
                                     }
                                 }
                             }
@@ -89,9 +81,20 @@ fn main() {
                     };
                     None
                 })
-                .for_each(move |(cmd, msg, original, args)| {
+                .for_each(move |(cmd, msg, original)| {
                     let handle = handle.clone();
                     let bot = bot.clone();
+                    let text = msg.text.clone().unwrap();
+                    let args : Vec<String> = {
+                        let captures = cmd.regex.captures(&text).expect(
+                            "we already checked for match",
+                        );
+                        cmd.args.iter().map(|a| {
+                            let mut buf = String::new();
+                            captures.expand(a, &mut buf);
+                            buf
+                        }).collect()
+                    };
                     let mut child = Command::new(&cmd.executable)
                         .args(&args)
                         .stdin(Stdio::piped())
@@ -101,7 +104,7 @@ fn main() {
                     let stdin = child.stdin().take().unwrap();
                     let res = match cmd.input {
                         config::InputType::Text => {
-                            io::write_all(stdin, msg.text.clone().unwrap().into_bytes())
+                            io::write_all(stdin, text.into_bytes())
                         }
                         config::InputType::Json => {
                             io::write_all(stdin, serde_json::to_vec(&original).unwrap())
