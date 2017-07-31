@@ -56,6 +56,17 @@ where
     }
     deserializer.deserialize_str(RegexDe)
 }
+#[derive(Clone, Copy, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "lowercase")]
+pub enum Mode {
+    Message,
+    Inline,
+}
+impl Mode {
+    pub fn message() -> Mode {
+        Mode::Message
+    }
+}
 #[derive(Clone, Deserialize)]
 pub struct Command {
     #[serde(deserialize_with = "deserialize_regex")]
@@ -65,6 +76,8 @@ pub struct Command {
     pub args: Vec<String>,
     pub input: InputType,
     pub output: OutputType,
+    #[serde(default = "Mode::message")]
+    pub mode: Mode,
     pub allowed: Option<Vec<i64>>,
 }
 impl Command {
