@@ -7,6 +7,7 @@ extern crate tokio_process;
 extern crate serde;
 #[macro_use]
 extern crate serde_derive;
+#[macro_use]
 extern crate serde_json;
 extern crate toml;
 
@@ -45,7 +46,6 @@ struct Opt {
 
 mod config;
 mod errors;
-
 
 
 fn handle_message(
@@ -183,6 +183,7 @@ fn handle_inline_query(
     let query_text = query.query.clone();
     let h = handle.clone();
     let batch_size = 10;
+    let cmd_clone = cmd.clone();
     let res = future::loop_fn(
         (0, Vec::new()),
         move |(iter, mut answers)| -> Box<Future<Item = future::Loop<_, _>, Error = errors::Error>> {
@@ -219,16 +220,53 @@ fn handle_inline_query(
             }))
         },
     );
-    let res = res.and_then(move |(_, mut answers)| {
-        answers.retain(|a| !a.is_empty());
-        let new_offset = offset + answers.len() as i32;
-        let results: Vec<_> = answers
-            .into_iter()
-            .enumerate()
-            .map(|(i, a)| {
-                types::request::InlineQueryResult::article(i.to_string(), a.clone(), a.clone())
-            })
-            .collect();
+    let res = res.and_then(move |(_, mut results)| {
+        results.retain(|a| !a.is_empty());
+        let new_offset = offset + results.len() as i32;
+        let results: Vec<serde_json::Value> = {
+            if cmd_clone.output == config::OutputType::Json {
+                let mut new_results = Vec::new();
+                let mut i = 0;
+                for r in results {
+                    let json: Result<serde_json::Value, _> = serde_json::from_str(&r);
+                    let r = match json {
+                        Ok(mut j) => {
+                            match j.as_object_mut() {
+                                Some(mut o) => {
+                                    o.insert("id".to_owned(), json!((offset + i).to_string()))
+                                }
+                                None => {
+                                    return future::err(
+                                        errors::ErrorKind::Output(
+                                            cmd_clone.executable,
+                                            "Expected a json object",
+                                        ).into(),
+                                    )
+                                }
+                            };
+                            j
+                        }
+                        Err(e) => return future::err(e.into()),
+                    };
+                    new_results.push(r);
+                    i += 1;
+                }
+                new_results
+            } else {
+                results
+                    .into_iter()
+                    .enumerate()
+                    .map(|(i, a)| {
+                        let i = i as i32;
+                        serde_json::to_value(types::request::InlineQueryResult::article(
+                            (offset + i).to_string(),
+                            a.clone(),
+                            a.clone(),
+                        )).expect("cannot convert to Value")
+                    })
+                    .collect()
+            }
+        };
         let answer =
             types::request::AnswerInlineQuery::new(query.id, results, new_offset.to_string());
         let work = bot.request::<_, serde_json::Value>(

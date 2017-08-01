@@ -23,5 +23,9 @@ error_chain! {
             description("Configuration error")
             display("Error in conf file {}: {}", file, descr)
         }
+        Output(cmd: String, descr: &'static str) {
+            description("Invalid output from command")
+            display("Invalid output from command {}: {}", cmd, descr)
+        }
     }
 }

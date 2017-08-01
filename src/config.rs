@@ -9,13 +9,13 @@ use super::serde_json;
 use super::regex;
 use super::errors::{Result, ResultExt, ErrorKind};
 
-#[derive(Clone, Debug, PartialEq, Eq, Deserialize)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq, Deserialize)]
 #[serde(rename_all = "lowercase")]
 pub enum InputType {
     Text,
     Json,
 }
-#[derive(Clone, Debug, PartialEq, Eq, Deserialize)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq, Deserialize)]
 #[serde(rename_all = "lowercase")]
 pub enum OutputType {
     Text,
