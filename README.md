@@ -36,7 +36,7 @@ The regex used to match this particular command.
 
 The commands are tested for matching in order, and the first one to match is executed.
 
-The supported synntax is the one supported by the rust regex crate.
+The supported syntax is the one supported by the rust regex crate.
 
 It is possible to specify capture groups, and reference them later (by number and/or name) in the `args` field.
 
@@ -59,7 +59,7 @@ The capture group `$0` is the entire match.
 The input mode that will be used. Supported modes are:
 
 - **json**: the raw json message will be sent to stdin
-- **text**: the `text` field of the message will be sent to stdio
+- **text**: the `text` field of the message will be sent to stdin
 
 ### input
 
