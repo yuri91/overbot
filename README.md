@@ -14,7 +14,7 @@ token = "mytoken"
 
 [[command]]
 regex='hello ([A-z]+)'
-executable = 'echo'
+executable = '/bin/echo'
 args = ['$1']
 input = 'text'
 output = 'text'
