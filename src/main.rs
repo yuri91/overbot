@@ -47,7 +47,6 @@ mod config;
 mod errors;
 
 
-
 fn handle_message(
     handle: Handle,
     bot: Bot,
@@ -222,15 +221,27 @@ fn handle_inline_query(
     let res = res.and_then(move |(_, mut answers)| {
         answers.retain(|a| !a.is_empty());
         let new_offset = offset + answers.len() as i32;
-        let results: Vec<_> = answers
-            .into_iter()
-            .enumerate()
-            .map(|(i, a)| {
-                types::request::InlineQueryResult::article(i.to_string(), a.clone(), a.clone())
-            })
-            .collect();
-        let answer =
-            types::request::AnswerInlineQuery::new(query.id, results, new_offset.to_string());
+        let answer: Vec<serde_json::Value> = {
+            if cmd.output == config::OutputType::Json {
+                let mut v = Vec::new();
+                for a in answers {
+                    let json: Result<serde_json::Value, _> = serde_json::from_str(&a);
+
+                }
+            } else {
+
+            }
+        }
+            let results: Vec<_> = answers
+                .into_iter()
+                .enumerate()
+                .map(|(i, a)| {
+                    types::request::InlineQueryResult::article(i.to_string(), a.clone(), a.clone())
+                })
+                .collect();
+            let answer =
+                types::request::AnswerInlineQuery::new(query.id, results, new_offset.to_string());
+        }
         let work = bot.request::<_, serde_json::Value>(
             "answerInlineQuery",
             &serde_json::to_value(answer).unwrap(),
