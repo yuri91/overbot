@@ -92,15 +92,15 @@ fn handle_message(
         Ok(c) => c,
         Err(e) => return Box::new(future::err(e.into())),
     };
-    let stdin = child.stdin().take().unwrap();
+    let stdin = child.stdin().take().expect("no stdin for the process");
     let res = match cmd.input {
         config::InputType::Text => io::write_all(stdin, text.into_bytes()),
-        config::InputType::Json => io::write_all(stdin, serde_json::to_vec(&original).unwrap()),
+        config::InputType::Json => io::write_all(stdin, serde_json::to_vec(&original).expect("cannot serialize")),
     };
     let res = res.map_err(|e| e.into()).and_then(|_| {
         child.wait_with_output().map_err(|e| e.into()).and_then(
             move |out| {
-                let mut out = String::from_utf8(out.stdout).unwrap();
+                let mut out = String::from_utf8(out.stdout).expect("encoding is not utf8");
                 println!("out: {:?}", out);
                 if cmd.output == config::OutputType::TextMono {
                     out = format!("```{}```", out);
@@ -127,7 +127,7 @@ fn handle_message(
                             types::request::Message::new(msg.chat.id, out).parse_mode(
                                 parse_mode,
                             ),
-                        ).unwrap(),
+                        ).expect("cannot convert to Value"),
                     );
                 }
                 let work = work.and_then(|r| {
@@ -202,17 +202,17 @@ fn handle_inline_query(
                 Ok(c) => c,
                 Err(e) => return Box::new(future::err(e.into())),
             };
-            let stdin = child.stdin().take().unwrap();
+            let stdin = child.stdin().take().expect("no stdin for the process");
             let res = match cmd.input {
                 config::InputType::Text => io::write_all(stdin, query_text.clone().into_bytes()),
                 config::InputType::Json => {
-                    io::write_all(stdin, serde_json::to_vec(&original).unwrap())
+                    io::write_all(stdin, serde_json::to_vec(&original).expect("cannot serialize"))
                 }
             };
             Box::new(res.map_err(|e| e.into()).and_then(move |_| {
                 child.wait_with_output().map_err(|e| e.into()).and_then(
                     move |out| {
-                        let out = String::from_utf8(out.stdout).unwrap();
+                        let out = String::from_utf8(out.stdout).expect("encoding is not utf8");
                         answers.push(out);
                         Ok(future::Loop::Continue((iter + 1, answers)))
                     },
@@ -271,7 +271,7 @@ fn handle_inline_query(
             types::request::AnswerInlineQuery::new(query.id, results, new_offset.to_string());
         let work = bot.request::<_, serde_json::Value>(
             "answerInlineQuery",
-            &serde_json::to_value(answer).unwrap(),
+            &serde_json::to_value(answer).expect("cannot converto to Value"),
         );
         let work = work.and_then(|r| {
             println!("{:?}", r);
@@ -286,7 +286,7 @@ fn main() {
     let opt = Opt::from_args();
     let config = config::get_all(&opt.config_dir).expect("Wrong path for config dir");
 
-    let mut event_loop = reactor::Core::new().unwrap();
+    let mut event_loop = reactor::Core::new().expect("cannot create reactor");
     let handle = event_loop.handle();
 
     let factory = BotFactory::new(handle.clone());
